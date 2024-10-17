@@ -3,7 +3,7 @@
 Combs through multiple files and Directories and seeks Duplicate files to Delete to save on storage space</h3><br>
 <br>
 <body>
-<p>The program combs through all directories in from the start directory to get all files. With all the file paths, each files' contents  are hashed with <code>sha256</code> and compared to each other to compare if the contents are the same. </p>
+<p>While dealing with multiple data transfer or on storage, multiple files can be duplicated on multiple locations hence making the data larger than it is. The program combs through all directories in from the start directory to get all files and compares each file with all the others to find the duplicates for deletion or modification. this is done by hashing the files with <code>sha256</code> and compared to each other to compare if the contents are the same. This code can work for any type of file format.</p>
 
 
 <p>
