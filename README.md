@@ -33,6 +33,7 @@ options:
 </pre><br>
 <pre>
 <h4>Example of this program checking on this Repository</h4>
+PS C:\..\Example\File-Cleanup> python .\main.py
  Checking for duplicated files 
 1 Name: HEAD has duplicate names in the following 1 variation(s):
 Hash_id 3fcbfae6f3af7c5f591c3ecc91a80ad64ce7b1e05a07332deaa32ad2c32db7e6
