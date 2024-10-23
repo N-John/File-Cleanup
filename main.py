@@ -27,9 +27,27 @@ import argparse
 import time
 import sys
 import hashlib
+from send2trash import send2trash
 
 #GLOBAL VARIABLES
 verbose=True
+
+##INTRO
+print("File manager able to check files for duplicate files and delete them")
+print("""DISCLAIMER!!!
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+    SOURCE CODE: https://github.com/N-John/File-Cleanup.git
+    COPYRIGHT: Copyright (c) 2024 John
+    LAST MODIFIIED: 23/10/2024 
+      """)
+
 
 class bcolors:
     """Add Colour for the output"""
@@ -61,7 +79,7 @@ def lpPrefix(filePath):
         return '\\\\?\\' + os.path.abspath(filePath)
     return filePath
 
-def summary(TotalFilesCnt,WalkCount,DupCount,execution_time):
+def summary(TotalFilesCnt,WalkCount,DupCount,execution_time,deleted=False,SizeChange="",FilesDeleted=0,prevDirSize="0",currentDirSize="0"):
     length=37
    
     print("+"+"-"*(length-2) +"+")
@@ -73,6 +91,16 @@ def summary(TotalFilesCnt,WalkCount,DupCount,execution_time):
     sys.stdout.write(f"\033[{length}G|\n")
     print(f"| Total Duplicates Found: {bcolors.FAIL}{bcolors.BOLD}{DupCount}{bcolors.ENDC}",end="")
     sys.stdout.write(f"\033[{length}G|\n")
+    if deleted:
+        print(f"| Files Deleted: {bcolors.FAIL}{bcolors.BOLD}{FilesDeleted}{bcolors.ENDC}",end="")
+        sys.stdout.write(f"\033[{length}G|\n")
+        print(f"| Previous Directory Size: {bcolors.FAIL}{bcolors.BOLD}{prevDirSize}{bcolors.ENDC}",end="")
+        sys.stdout.write(f"\033[{length}G|\n")
+        print(f"| CurrentDirectory Size: {bcolors.FAIL}{bcolors.BOLD}{currentDirSize}{bcolors.ENDC}",end="")
+        sys.stdout.write(f"\033[{length}G|\n")
+        print(f"| File Change Size: {bcolors.FAIL}{bcolors.BOLD}{SizeChange}{bcolors.ENDC}",end="")
+        sys.stdout.write(f"\033[{length}G|\n")
+
     print("+"+"-"*(length-2)+"+")
 
 def deleteEmptyFiles(root_directory):
@@ -98,7 +126,7 @@ def deleteEmptyFiles(root_directory):
     emptyCount=0
     for name, fpath in emptyFile_map.items():
         emptyCount=emptyCount+1
-        print(f"{emptyCount} Name: {bcolors.WARNING}{bcolors.BOLD}{name}{bcolors.ENDC} is empty ")
+        print(f"{emptyCount} Name: {bcolors.FAIL}{bcolors.BOLD}{name}{bcolors.ENDC} is empty ")
         file_size = convert_size(os.path.getsize(fpath))
         print(f"  {fpath} [{file_size}]")
 
@@ -112,7 +140,7 @@ def hsFunct(file_path):
     
     return sha256_hash.hexdigest()
 
-def similarFiles(root_directory):
+def similarFiles(root_directory,deleteEmpty=False,deleteSimilar=False,permanent=False):
     """Function to comb and look for similar files"""
     print(f" {bcolors.HEADER}Checking for duplicated files {bcolors.ENDC}")
 
@@ -120,7 +148,9 @@ def similarFiles(root_directory):
     name_map = {}
     filesChecked=0
     WalkCount=0
-    dupFilesCount=0
+    TotaldupFilesCount=0
+    startFileSize=os.path.getsize(root_directory)
+    filesDeletedCnt=0
 
     for dirpath, dirnames, filenames in os.walk(root_directory):
         WalkCount=WalkCount+1
@@ -166,22 +196,57 @@ def similarFiles(root_directory):
 
             if len(similarhash)>0:
                 dupCount=dupCount+1
-                print(f"{dupCount} Name: {bcolors.WARNING}{bcolors.BOLD}{name}{bcolors.ENDC} has duplicate names in the following {bcolors.WARNING}{bcolors.BOLD}{len(similarhash)}{bcolors.ENDC} variation(s):")
+                print(f"{dupCount} Name: {bcolors.FAIL}{bcolors.BOLD}{name}{bcolors.ENDC} has duplicate names in the following variation(s):")
 
                 for currentHash in similarhash:
                     printv(f"Hash_id {bcolors.UNDERLINE}{currentHash}{bcolors.ENDC}")
-
+                    dupFilesCount=0
                     for id,hashings in filesHash.items():
                         if filesHash[id]["FileHash"] == currentHash:
-                            printv(f"    {bcolors.BOLD}{filesHash[id]["filePath"]}{bcolors.ENDC} {convert_size(os.path.getsize(filesHash[id]["filePath"]))}")
+                            
+                            if dupFilesCount>=1 and deleteSimilar==True: 
+                                filePath=filesHash[id]["filePath"]
+                                try:
+                                    printv(f"    {bcolors.BOLD}{filesHash[id]["filePath"]}{bcolors.ENDC} {convert_size(os.path.getsize(filesHash[id]["filePath"]))}")
+                                    
+                                    if permanent:                                        
+                                        os.remove(filesHash[id]["filePath"])
+                                        print(f"{bcolors.OKGREEN}[DELETED PERMANENT]{bcolors.ENDC}")
+                                        filesDeletedCnt=filesDeletedCnt+1
+                                    else:
+                                        send2trash(filesHash[id]["filePath"])
+                                        print(f"{bcolors.OKGREEN}[DELETED]{bcolors.ENDC}")
+
+                                    filesDeletedCnt=filesDeletedCnt+1
+
+
+                                except FileNotFoundError:
+                                    print(f"{bcolors.FAIL}{filesHash[id]["filePath"]} does not exist.{bcolors.ENDC}")
+                                except Exception as e:
+                                    print(f"{bcolors.FAIL}Error Deleting file at {filesHash[id]["filePath"]}{bcolors.ENDC}: {e}")
+                            else:
+                                printv(f"    {bcolors.BOLD}{filesHash[id]["filePath"]}{bcolors.ENDC} {convert_size(os.path.getsize(filesHash[id]["filePath"]))}")
+                                print(f"{bcolors.OKGREEN}[SAVED]{bcolors.ENDC}")
+
                             dupFilesCount=dupFilesCount+1
+                            TotaldupFilesCount=TotaldupFilesCount+1
+                    
+                    
 
                 printv("")
-                
+    
+    EndFileSize=os.path.getsize(root_directory)
     endTime=time.time() 
     execution_time = endTime - startTime
 
-    summary(TotalFilesCnt=filesChecked,WalkCount=WalkCount,DupCount=dupFilesCount,execution_time=execution_time)
+    if deleteSimilar or deleteEmpty:
+        deleted=True
+        fc=EndFileSize-startFileSize
+        Schange=convert_size(fc)
+
+
+    summary(TotalFilesCnt=filesChecked,WalkCount=WalkCount,DupCount=TotaldupFilesCount,execution_time=execution_time,deleted=deleted,FilesDeleted=filesDeletedCnt,SizeChange=Schange,
+    prevDirSize=convert_size(startFileSize),currentDirSize=convert_size(EndFileSize))
     
 #MAIN
 if __name__ == "__main__":
@@ -190,9 +255,11 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", action="store_true", help="Suppress detailed output")
     #parser.add_argument("--empty", action="store_true", help="Only print empty files")
     #parser.add_argument("--deleteEmpty", action="store_true", help="Deletes Empty Files")
+    parser.add_argument("--Permanent", action="store_true", help="Deletes Files Permanently")
+    parser.add_argument("--deleteCopies", action="store_true", help="Deletes Copy Files")
 
     args = parser.parse_args()
     
     if args.quiet:
         verbose=False
-    similarFiles(args.directory)
+    similarFiles(args.directory,deleteSimilar=args.deleteCopies,permanent=args.Permanent)

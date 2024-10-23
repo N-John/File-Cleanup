@@ -29,7 +29,9 @@ positional arguments:
 
 options:
   -h, --help  show this help message and exit
-  --quiet     Suppress detailed output
+  --quiet         Suppress detailed output
+  --Permanent     Deletes Files Permanently
+  --deleteCopies  Deletes Copy Files
 </pre><br>
 <pre>
 <h4>Example of this program checking on this Repository</h4>
