@@ -20,7 +20,7 @@ The following libraries are required for the program to run:
 <p>To run this code <code>python main.py [start_Directory] </code></p><br>
 <pre>
 C:\..\Example\File-Cleanup> python .\main.py -h
-usage: main.py [-h] [--quiet] [directory]
+usage: main.py [-h] [--quiet] [--Permanent] [--deleteCopies] [directory]
 
 Search for duplicate file and folder names.
 
